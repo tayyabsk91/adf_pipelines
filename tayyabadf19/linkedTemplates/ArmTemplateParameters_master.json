@@ -1,0 +1,45 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "tayyabadf19"
+		},
+		"AzureDataLakeStorage1_accountKey": {
+			"value": ""
+		},
+		"AzureSqlDatabase1_password": {
+			"value": ""
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://tayyabadls.dfs.core.windows.net/"
+		},
+		"AzureSqlDatabase1_properties_typeProperties_server": {
+			"value": "tayyabserver.database.windows.net"
+		},
+		"AzureSqlDatabase1_properties_typeProperties_database": {
+			"value": "tayyabdb"
+		},
+		"AzureSqlDatabase1_properties_typeProperties_userName": {
+			"value": "tayyab"
+		},
+		"RestService1_properties_typeProperties_url": {
+			"value": "https://dummyjson.com/products"
+		},
+		"checking_trigger_functions_properties_checking_Trigger_activity_parameters_file_name": {
+			"value": "@triggerBody().fileName"
+		},
+		"checking_trigger_functions_properties_typeProperties_scope": {
+			"value": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Storage/storageAccounts/tayyabadls"
+		},
+		"storage_event_trig_properties_typeProperties_scope": {
+			"value": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Storage/storageAccounts/tayyabadls"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
