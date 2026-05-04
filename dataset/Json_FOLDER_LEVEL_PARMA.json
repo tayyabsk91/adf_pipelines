@@ -1,0 +1,81 @@
+{
+	"name": "Json_FOLDER_LEVEL_PARMA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "sample2 (2).json",
+				"folderPath": "SAMPLE_JSON",
+				"fileSystem": "tayyabcontainer"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"shoppingList": {
+					"type": "object",
+					"properties": {
+						"groceries": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"item": {
+										"type": "string"
+									},
+									"quantity": {
+										"type": "integer"
+									},
+									"unit": {
+										"type": "string"
+									}
+								}
+							}
+						},
+						"personalCare": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"item": {
+										"type": "string"
+									},
+									"quantity": {
+										"type": "integer"
+									},
+									"unit": {
+										"type": "string"
+									}
+								}
+							}
+						},
+						"householdItems": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"item": {
+										"type": "string"
+									},
+									"quantity": {
+										"type": "integer"
+									},
+									"unit": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

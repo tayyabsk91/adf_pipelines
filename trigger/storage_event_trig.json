@@ -1,0 +1,24 @@
+{
+	"name": "storage_event_trig",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "event_driven_pipeline",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/tayyabcontainer/blobs/file_arrives/",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Storage/storageAccounts/tayyabadls",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}

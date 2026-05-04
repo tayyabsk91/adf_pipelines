@@ -1,0 +1,34 @@
+{
+	"name": "PARAM_DB",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "item",
+				"type": "nvarchar"
+			},
+			{
+				"name": "quantity",
+				"type": "nvarchar"
+			},
+			{
+				"name": "unit",
+				"type": "nvarchar"
+			},
+			{
+				"name": "category",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "faltu"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

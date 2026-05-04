@@ -1,0 +1,122 @@
+{
+	"name": "AzureSqlTable3",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "user_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "product_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "category",
+				"type": "varchar"
+			},
+			{
+				"name": "subcategory",
+				"type": "varchar"
+			},
+			{
+				"name": "brand",
+				"type": "varchar"
+			},
+			{
+				"name": "price",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "discount",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "final_price",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "rating",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "review_count",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "stock",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "seller_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "seller_rating",
+				"type": "float",
+				"precision": 15
+			},
+			{
+				"name": "purchase_date",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "shipping_time_days",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "location",
+				"type": "varchar"
+			},
+			{
+				"name": "device",
+				"type": "varchar"
+			},
+			{
+				"name": "payment_method",
+				"type": "varchar"
+			},
+			{
+				"name": "is_returned",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "delivery_status",
+				"type": "varchar"
+			},
+			{
+				"name": "file_name",
+				"type": "varchar"
+			},
+			{
+				"name": "load_date",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "stg_ecommerce_data"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

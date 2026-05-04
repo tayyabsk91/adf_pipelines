@@ -1,0 +1,15 @@
+{
+	"name": "tayyabadf19",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Enabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "e9335db5-1383-471d-9c2f-20a982e58de2",
+		"tenantId": "b40ed5af-be64-4280-a686-beb2db519dfa"
+	}
+}

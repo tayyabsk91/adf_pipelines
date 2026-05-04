@@ -1,0 +1,112 @@
+{
+	"name": "pipeline2",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.categories",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"path": "['item']"
+											},
+											"sink": {
+												"name": "item",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "['quantity']"
+											},
+											"sink": {
+												"name": "quantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "['unit']"
+											},
+											"sink": {
+												"name": "unit",
+												"type": "String"
+											}
+										}
+									],
+									"collectionReference": "$['shoppingList']['@{item()}']"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Json_FOLDER_LEVEL_PARMA",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "PARAM_DB",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"categories": {
+				"type": "array",
+				"defaultValue": [
+					"groceries",
+					"personalCare",
+					"householdItems"
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-05-02T19:28:14Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

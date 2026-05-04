@@ -1,0 +1,202 @@
+{
+	"name": "ingesting_data",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy data1",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "['id']"
+								},
+								"sink": {
+									"name": "product_id",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"path": "['title']"
+								},
+								"sink": {
+									"name": "title",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['description']"
+								},
+								"sink": {
+									"name": "description",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['category']"
+								},
+								"sink": {
+									"name": "category",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['price']"
+								},
+								"sink": {
+									"name": "price",
+									"type": "Double"
+								}
+							},
+							{
+								"source": {
+									"path": "['discountPercentage']"
+								},
+								"sink": {
+									"name": "discount_percentage",
+									"type": "Double"
+								}
+							},
+							{
+								"source": {
+									"path": "['rating']"
+								},
+								"sink": {
+									"name": "rating",
+									"type": "Double"
+								}
+							},
+							{
+								"source": {
+									"path": "['stock']"
+								},
+								"sink": {
+									"name": "stock",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"path": "['brand']"
+								},
+								"sink": {
+									"name": "brand",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['sku']"
+								},
+								"sink": {
+									"name": "sku",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['availabilityStatus']"
+								},
+								"sink": {
+									"name": "availability_status",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['products'][0]['meta']['createdAt']"
+								},
+								"sink": {
+									"name": "created_at",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"path": "$['products'][0]['meta']['updatedAt']"
+								},
+								"sink": {
+									"name": "updated_at",
+									"type": "DateTime"
+								}
+							}
+						],
+						"collectionReference": "$['products']"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "RestResource1",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "AzureSqlTable1",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "triggering_sp_load_product_data",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy data1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[sp_load_product_data]"
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase1",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-04-28T17:10:36Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
