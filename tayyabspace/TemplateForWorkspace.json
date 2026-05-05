@@ -1,0 +1,998 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "tayyabspace"
+		},
+		"tayyabspace-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'tayyabspace-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:tayyabspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://tayyabexternal.dfs.core.windows.net/"
+		},
+		"tayyabspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://tayyabadls.dfs.core.windows.net"
+		},
+		"event_trigger_properties_event_mv_stg_to_raw_parameters_file_name": {
+			"type": "string",
+			"defaultValue": "@triggerBody().fileName"
+		},
+		"event_trigger_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Storage/storageAccounts/tayyabadls"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/event_mv_stg_to_raw')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": false,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "csv_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"file_name": {
+										"value": "@pipeline().parameters.file_name",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DelimitedText1",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "raw_silver",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "raw_silver",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"file_name": {
+									"value": {
+										"value": "@pipeline().parameters.file_name",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "sparkpool",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false
+							},
+							"driverSize": "Small"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-05-05T10:30:40Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/csv_ds')]",
+				"[concat(variables('workspaceId'), '/datasets/DelimitedText1')]",
+				"[concat(variables('workspaceId'), '/notebooks/raw_silver')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/sparkpool')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/scheduled_mv_stg_to_raw')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "scheduled_raw_silver",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "scheduled_raw_silver",
+								"type": "NotebookReference"
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "sparkpool",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false
+							},
+							"driverSize": "Small"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-05-05T10:05:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/scheduled_raw_silver')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/sparkpool')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DelimitedText1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "tayyabspace-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "raw",
+						"fileSystem": "ecommerce"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/tayyabspace-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/csv_ds')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "tayyabspace-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file_name",
+							"type": "Expression"
+						},
+						"folderPath": "staging",
+						"fileSystem": "ecommerce"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "user_id",
+						"type": "String"
+					},
+					{
+						"name": "product_id",
+						"type": "String"
+					},
+					{
+						"name": "category",
+						"type": "String"
+					},
+					{
+						"name": "subcategory",
+						"type": "String"
+					},
+					{
+						"name": "brand",
+						"type": "String"
+					},
+					{
+						"name": "price",
+						"type": "String"
+					},
+					{
+						"name": "discount",
+						"type": "String"
+					},
+					{
+						"name": "final_price",
+						"type": "String"
+					},
+					{
+						"name": "rating",
+						"type": "String"
+					},
+					{
+						"name": "review_count",
+						"type": "String"
+					},
+					{
+						"name": "stock",
+						"type": "String"
+					},
+					{
+						"name": "seller_id",
+						"type": "String"
+					},
+					{
+						"name": "seller_rating",
+						"type": "String"
+					},
+					{
+						"name": "purchase_date",
+						"type": "String"
+					},
+					{
+						"name": "shipping_time_days",
+						"type": "String"
+					},
+					{
+						"name": "location",
+						"type": "String"
+					},
+					{
+						"name": "device",
+						"type": "String"
+					},
+					{
+						"name": "payment_method",
+						"type": "String"
+					},
+					{
+						"name": "is_returned",
+						"type": "String"
+					},
+					{
+						"name": "delivery_status",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/tayyabspace-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/param_ds_csv')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "tayyabspace-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"container": {
+						"type": "string"
+					},
+					"folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/tayyabspace-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/tayyabspace-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('tayyabspace-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/tayyabspace-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('tayyabspace-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/event_trigger')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "event_mv_stg_to_raw",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"file_name": "[parameters('event_trigger_properties_event_mv_stg_to_raw_parameters_file_name')]"
+						}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/ecommerce/blobs/staging/",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('event_trigger_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/event_mv_stg_to_raw')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/scheduled_trigger')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "scheduled_mv_stg_to_raw",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 1,
+						"startTime": "2026-05-05T17:25:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/scheduled_mv_stg_to_raw')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CETASandVIEWSforserverlesssqlpool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "--CETAS ( not defining columns and all as we directly storing another query results)\nCREATE EXTERNAL TABLE cetas_table\nwith (\n    LOCATION = 'cetas_external_table',\n    DATA_SOURCE = external_source,\n    FILE_FORMAT = formatcsv\n)\nas \nSELECT *\nFROM OPENROWSET(\n        BULK '/samples_External_files/dim_product.csv',\n\t\tDATA_SOURCE = 'external_source',\n        FORMAT='CSV',\n        PARSER_VERSION='2.0',\n        HEADER_ROW = TRUE\n) AS data;\n\n--- VIEWS \ncreate VIEW view_query\nas \nSELECT * from \nOPENROWSET (\n        BULK 'samples_External_files/dim_date.csv',\n\t\tDATA_SOURCE = 'external_source',\n        FORMAT='CSV',\n        PARSER_VERSION='2.0',\n        HEADER_ROW = TRUE\n) as query1\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "tayyab_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EXTERNAL_tABLES')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL FILE FORMAT formatcsv\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        FIRST_ROW = 2,\n        USE_TYPE_DEFAULT = TRUE\n    )\n);\n\n\ncreate external table product\n(\n    product_sk varchar(4000),\n    product_code varchar(4000),\n    product_name varchar(4000),\n    department varchar(4000),\n    category varchar(4000),\n    supplier_sk varchar(4000),\n    list_price varchar(4000),\n    uom varchar(4000)\n)\nWITH (\n    LOCATION = 'samples_External_files/dim_product.csv',\n    DATA_SOURCE = external_source,\n    FILE_FORMAT = formatcsv\n   \n);\n\n\nselect * from sys.external_data_sources where name = 'external_source'\n\nselect * from  dbo.product \n\nSELECT * FROM sys.exteral_s",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "tayyab_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OPENROWSET')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL TABLE ext_table3\n(\n\tfirst_name VARCHAR(4000),\n\tlast_name VARCHAR(4000),\n\tgender VARCHAR(4000),\n\temail VARCHAR(4000),\n\tphone VARCHAR(4000),\n\tloyalty_tier VARCHAR(4000) ,\n\tsignup_date VARCHAR(4000)\n)\nwith (\n\tLOCATION = 'CSV_FILE',\n\tDATA_SOURCE = external_source,\n\tFILE_FORMAT = csvheader\n)\n\nSELECT * FROM ext_table\nselect * from sys.external_data_sources where name  = 'external_source'\n\n\nSELECT * FROM sys.external_file_formats where name = 'csv_format'\n\nselect * from ext_table2\n\nCREATE EXTERNAL FILE FORMAT csvheader\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (FIELD_TERMINATOR = ',',FIRST_ROW = 2)\n);\n\nSELECT *\nFROM OPENROWSET(\n        BULK '/samples_External_files/dim_product.csv',\n\t\tDATA_SOURCE = 'external_source',\n        FORMAT='CSV',\n        PARSER_VERSION='2.0',\n        HEADER_ROW = TRUE\n) AS data;\n\nselect * from ext_table1\n\n\n-- EXTERNAL DATA SOURCE AND SCOPED CREDENTIAL EXAMPLE \n\nCREATE EXTERNAL DATA SOURCE MySource\nWITH (\n    LOCATION = 'https://myaccount.dfs.core.windows.net/mycontainer',\n    CREDENTIAL = MyCredential\n);\n\n\nCREATE DATABASE SCOPED CREDENTIAL MyManagedIdentityCred\nWITH IDENTITY = 'Managed Identity'; -- SYNAPSE WILL AUTOMATICALLY ACCESS NO NEED FO RSAS OR ACCESS KEY JUST ALLOW STORAGE BLOB DATA CONTIRBNUTOR TO SYNAPSE WORKSPACE ON THAT SOTRAGE ACCOUNT \n\n\n-- MASTER KEYFOR SYNAPSE EK DATABASE ME SIRF EK MASTER KEY YEH BASICALLY CREDENTIALS KO EMNCRYPT KRKE STORE KRTIU NA KI PLAIN TEXT (SCOPED CREDENTIAL DATA SOURCE ETC )\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'YourStrongPassword123!'; \n\n-- EXTERNAL FILE FORMAT EXAMPLE AGAR EXTERNAL FILE KE UPAR TABLE BNANA CHAHRE TO ISE BNANA PDEGA KYUKI YEH FILE KE UPAR SCHEMA BNAATA JISSE AS A TABLE READ KR PATA \n\nCREATE EXTERNAL FILE FORMAT csvheader\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (FIELD_TERMINATOR = ',',FIRST_ROW = 2)\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "tayyab_db",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PRACTICE')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT TOP 100\n    jsonContent\n/* --> place the keys that you see in JSON documents in the WITH clause:\n       , JSON_VALUE (jsonContent, '$.key1') AS header1\n       , JSON_VALUE (jsonContent, '$.key2') AS header2\n*/\nFROM\n    OPENROWSET(\n        BULK 'https://tayyabexternal.dfs.core.windows.net/externalsamplefiles/JSON_FILES/LoanByTimeSTamp_2013_20260218085401.json',\n        FORMAT = 'CSV',\n        FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR ='0x0b',\n        ROWTERMINATOR = '0x0b'\n    )\n    WITH (\n        jsonContent varchar(MAX)\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/dedicated_sql_Script')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL DATA SOURCE extsource\nWITH (\n    LOCATION = 'https://tayyabexternal.blob.core.windows.net/externalsamplefiles',\n    CREDENTIAL = extcreds\n);\n\ncreate DATABASE SCOPED CREDENTIAL extcreds\nwith IDENTITY = 'Managed Identity'\n\nCREATE EXTERNAL FILE FORMAT csvext\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (FIELD_TERMINATOR = ',',FIRST_ROW = 2)\n);\n\n-- JO 1. 2 NO DERHAHA HU vo order hai kis order me column chahiye\nCOPY INTO dbo.copy_into\n(\n    customer_sk,\n    customer_code,\n    first_name,\n    last_name,\n    gender,\n    email,\n    phone,\n    loyalty_tier,\n    signup_date\n)\nFROM 'https://tayyabexternal.blob.core.windows.net/externalsamplefiles/CSV_FILE/dim_customer.csv'\nWITH (\n    FILE_TYPE = 'CSV',\n    FIRSTROW = 2,\n    FIELDTERMINATOR = ',',\n    CREDENTIAL = (IDENTITY = 'Managed Identity')\n);\n\nCREATE VIEW viewex\nAS (\nSELECT * FROM copy_into\n)\n\n\n--crerating external table in dedidcatedsqlpool\n\n\nCREATE EXTERNAL table exttable\n(\n    customer_sk varchar(4000),\n    customer_code varchar(4000),\n    first_name varchar(4000),\n    last_name varchar(4000),\n    gender varchar(4000),\n    email varchar(4000),\n    phone varchar(4000),\n    loyalty_tier varchar(4000),\n    signup_date varchar(4000)\n)\nWITH (\n    LOCATION = '/dim_customer.csv',\n    DATA_SOURCE = abfsspath,\n    FILE_FORMAT = csvext\n)\n\ncreate table polybase_table\nwith (\n        DISTRIBUTION = ROUND_ROBIN\n)\nas SELECT * from exttable\n\n\n\n\n-- for abfss path datasource because in dedicatedsqlpool it only accepts the abfss path only \nCREATE EXTERNAL DATA SOURCE abfsspath\nWITH (\n    LOCATION = 'abfss://externalsamplefiles@tayyabexternal.dfs.core.windows.net/CSV_FILE/',\n    CREDENTIAL = extcreds\n);\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Tayyabdedicatedpool",
+						"poolName": "Tayyabdedicatedpool"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/raw_silver')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "sparkpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "5e3b73db-0aa5-4e3a-9b63-ed9144c7dfd0"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "python"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Synapse/workspaces/tayyabspace/bigDataPools/sparkpool",
+						"name": "sparkpool",
+						"type": "Spark",
+						"endpoint": "https://tayyabspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"file_name = \"\""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql.functions import *\n",
+							"\n",
+							"# ── 1. CONFIG\n",
+							"raw_path    = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/raw/\"\n",
+							"silver_path = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/silver/\"\n",
+							"\n",
+							"\n",
+							"if not file_name:\n",
+							"    raise ValueError(\"No file_name parameter received!\")\n",
+							"\n",
+							"# ── 3. READ\n",
+							"df_raw = spark.read \\\n",
+							"    .format(\"csv\") \\\n",
+							"    .option(\"header\", \"true\") \\\n",
+							"    .option(\"inferSchema\", \"true\") \\\n",
+							"    .load(raw_path + file_name)\n",
+							"\n",
+							"# ── 4. SELECT columns\n",
+							"df = df_raw.select(\n",
+							"    \"user_id\", \"product_id\", \"category\", \"subcategory\",\"brand\", \"price\", \"discount\", \"final_price\",\n",
+							"    \"rating\", \"review_count\", \"stock\", \"seller_id\", \"seller_rating\",\"purchase_date\", \"shipping_time_days\",\n",
+							"    \"location\", \"device\", \"payment_method\",\"is_returned\", \"delivery_status\" )\n",
+							"    \n",
+							"# ── 5. TRANSFORM\n",
+							"df_clean = df \\\n",
+							"    .withColumn(\"purchase_date\",   to_date(col(\"purchase_date\"))) \\\n",
+							"    .withColumn(\"category\",        trim(col(\"category\"))) \\\n",
+							"    .withColumn(\"delivery_status\", trim(col(\"delivery_status\"))) \\\n",
+							"    .withColumn(\"ingested_at\",     current_timestamp()) \\\n",
+							"    .dropna(subset=[\"user_id\", \"product_id\", \"purchase_date\"])\n",
+							"\n",
+							"# print(f\"Rows after cleaning: {df_clean.count()}\")\n",
+							"\n",
+							"# ── 6. WRITE Delta to Silver\n",
+							"df_clean.write \\\n",
+							"    .format(\"delta\") \\\n",
+							"    .mode(\"overwrite\") \\\n",
+							"    .option(\"mergeSchema\", \"true\") \\\n",
+							"    .save(silver_path)"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/scheduled_raw_silver')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "sparkpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "0dea6e14-cc57-4056-883f-babbae84e976"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/c48fd04c-8f2d-4a0c-9fca-0e28ce3c60c7/resourceGroups/Please_use_resource_carfully/providers/Microsoft.Synapse/workspaces/tayyabspace/bigDataPools/sparkpool",
+						"name": "sparkpool",
+						"type": "Spark",
+						"endpoint": "https://tayyabspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"staging_path = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/staging/\""
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"from pyspark.sql.functions import *\n",
+							"from delta.tables import DeltaTable\n",
+							"from notebookutils import mssparkutils\n",
+							"import json\n",
+							"\n",
+							"bronze_path   = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/bronze/\"\n",
+							"silver_path   = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/scheduled_silver/\"\n",
+							"metadata_path = \"abfss://ecommerce@tayyabadls.dfs.core.windows.net/metadata_scheduled/processed_files.json\"\n",
+							"\n",
+							"# ── 1 Pehle se process hui files ki list lo\n",
+							"try:\n",
+							"    content = mssparkutils.fs.head(metadata_path) #vyeh json k andar ka text dega in string\n",
+							"    processed_files = json.loads(content) # make it as python object (list)\n",
+							"except:\n",
+							"    processed_files = []\n",
+							"\n",
+							"print(f\" processed files: {processed_files}\")\n",
+							"\n",
+							"#  2 Staging all csv files\n",
+							"all_files = mssparkutils.fs.ls(staging_path)\n",
+							"\n",
+							"# Sirf woh files lo jo pehle process nahi hui\n",
+							"new_files = [f for f in all_files if f.name.endswith(\".csv\") and f.name not in processed_files]\n",
+							"\n",
+							"print(f\"New files: {[f.name for f in new_files]}\")\n",
+							"\n",
+							"if not new_files:\n",
+							"    print(\"no new files.\")\n",
+							"\n",
+							"else:\n",
+							"    #  4 Nai files Bronze mein copy karo as-is backup\n",
+							"    for f in new_files:\n",
+							"        mssparkutils.fs.cp(f.path, bronze_path + f.name)\n",
+							"    print(f\"Bronze mein copy ho gayi: {[f.name for f in new_files]}\")\n",
+							"\n",
+							"    #  5 Sirf nai files read karo\n",
+							"    df_raw = spark.read \\\n",
+							"        .format(\"csv\") \\\n",
+							"        .option(\"header\", \"true\") \\\n",
+							"        .option(\"inferSchema\", \"true\") \\\n",
+							"        .load([f.path for f in new_files])\n",
+							"\n",
+							"    #  6. Columns select karo\n",
+							"    df = df_raw.select(\n",
+							"        \"user_id\", \"product_id\", \"category\", \"subcategory\",\"brand\", \"price\", \"discount\",\n",
+							"         \"final_price\", \"rating\", \"review_count\", \"stock\",\"seller_id\", \"seller_rating\",\n",
+							"        \"purchase_date\", \"shipping_time_days\", \"location\", \"device\", \"payment_method\", \"is_returned\", \"delivery_status\"\n",
+							"    )\n",
+							"\n",
+							"    #  7. Transform\n",
+							"    df_clean = df \\\n",
+							"        .withColumn(\"purchase_date\",   to_date(col(\"purchase_date\"))) \\\n",
+							"        .withColumn(\"category\",        trim(col(\"category\"))) \\\n",
+							"        .withColumn(\"delivery_status\", trim(col(\"delivery_status\"))) \\\n",
+							"        .withColumn(\"ingested_at\",     current_timestamp()) \\\n",
+							"        .dropna(subset=[\"user_id\", \"product_id\", \"purchase_date\"])\n",
+							"\n",
+							"    #  8. Silver writing the table\n",
+							"    # 1st  overwrite new table create\n",
+							"    # 2nd  MERGE no duplicates\n",
+							"    if DeltaTable.isDeltaTable(spark, silver_path):\n",
+							"        DeltaTable.forPath(spark, silver_path).alias(\"existing\") \\\n",
+							"            .merge(\n",
+							"                df_clean.alias(\"new\"),\n",
+							"                \"\"\"existing.user_id = new.user_id\n",
+							"                   AND existing.product_id = new.product_id\n",
+							"                   AND existing.purchase_date = new.purchase_date\"\"\"\n",
+							"            ) \\\n",
+							"            .whenNotMatched().insertAll() \\\n",
+							"            .execute()\n",
+							"    else:\n",
+							"        df_clean.write \\\n",
+							"            .format(\"delta\") \\\n",
+							"            .mode(\"overwrite\") \\\n",
+							"            .save(silver_path)\n",
+							"\n",
+							"    # 9 Metadata update \n",
+							"    updated_list = processed_files + [f.name for f in new_files]\n",
+							"    mssparkutils.fs.put(metadata_path, json.dumps(updated_list), overwrite=True)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"print(\"hello\")"
+						],
+						"outputs": [],
+						"execution_count": 16
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sparkpool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Tayyabdedicatedpool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
+		}
+	]
+}
