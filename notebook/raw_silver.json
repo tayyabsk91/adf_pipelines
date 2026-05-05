@@ -18,15 +18,16 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "86640255-fa5e-49a6-b09f-e593e092c950"
+				"spark.autotune.trackingId": "5e3b73db-0aa5-4e3a-9b63-ed9144c7dfd0"
 			}
 		},
 		"metadata": {
 			"saveOutput": true,
-			"synapse_widget": {
-				"version": "0.1"
-			},
 			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "python"
+			},
 			"language_info": {
 				"name": "python"
 			},
@@ -37,14 +38,13 @@
 				"endpoint": "https://tayyabspace.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkpool",
 				"auth": {
 					"type": "AAD",
-					"authResource": "https://dev.azuresynapse.net",
-					"authHeader": null
+					"authResource": "https://dev.azuresynapse.net"
 				},
 				"sparkVersion": "3.5",
 				"nodeCount": 10,
 				"cores": 4,
 				"memory": 28,
-				"extraHeader": null
+				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
 		},
@@ -58,7 +58,8 @@
 				},
 				"source": [
 					"file_name = \"\""
-				]
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -73,7 +74,6 @@
 					"if not file_name:\n",
 					"    raise ValueError(\"No file_name parameter received!\")\n",
 					"\n",
-					"\n",
 					"# ── 3. READ\n",
 					"df_raw = spark.read \\\n",
 					"    .format(\"csv\") \\\n",
@@ -85,9 +85,8 @@
 					"df = df_raw.select(\n",
 					"    \"user_id\", \"product_id\", \"category\", \"subcategory\",\"brand\", \"price\", \"discount\", \"final_price\",\n",
 					"    \"rating\", \"review_count\", \"stock\", \"seller_id\", \"seller_rating\",\"purchase_date\", \"shipping_time_days\",\n",
-					"    \"location\", \"device\", \"payment_method\",\"is_returned\", \"delivery_status\"\n",
-					")\n",
-					"\n",
+					"    \"location\", \"device\", \"payment_method\",\"is_returned\", \"delivery_status\" )\n",
+					"    \n",
 					"# ── 5. TRANSFORM\n",
 					"df_clean = df \\\n",
 					"    .withColumn(\"purchase_date\",   to_date(col(\"purchase_date\"))) \\\n",
@@ -103,10 +102,9 @@
 					"    .format(\"delta\") \\\n",
 					"    .mode(\"overwrite\") \\\n",
 					"    .option(\"mergeSchema\", \"true\") \\\n",
-					"    .save(silver_path)\n",
-					"\n",
-					"# print(\" Written to silver successfully.\")"
-				]
+					"    .save(silver_path)"
+				],
+				"execution_count": null
 			}
 		]
 	}
